@@ -58,7 +58,7 @@ networkx==3.4.2
 nibabel==5.3.2
 ninja==1.11.1.4
 nipype==1.10.0
-numpy==1.26.0
+numpy
 opencv-python-headless==4.11.0.86
 openpyxl==3.1.5
 packaging==24.2
@@ -117,7 +117,7 @@ tenacity==9.1.2
 tifffile==2025.3.30
 tokenizers==0.21.1
 toml==0.10.2
-torch==2.2.0+cpu
+torch
 torchvision==0.17.0+cpu
 tornado==6.4.2
 tqdm==4.67.1
