@@ -88,8 +88,6 @@ python-docx==1.1.2
 python-dotenv==1.1.0
 python-pptx==1.0.2
 pytz==2025.2
-pywin32==310
-pyxnat==1.6.3
 PyYAML==6.0.2
 rdflib==6.3.2
 referencing==0.36.2
@@ -118,7 +116,7 @@ tifffile==2025.3.30
 tokenizers==0.21.1
 toml==0.10.2
 torch
-torchvision==0.17.0+cpu
+torchvision
 tornado==6.4.2
 tqdm==4.67.1
 traits==7.0.2
