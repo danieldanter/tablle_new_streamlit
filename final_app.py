@@ -191,6 +191,7 @@ def main():
     col1, col2 = st.columns([1, 1])
     
     # Upload & Convert Section (Left Column)
+    # Upload & Convert Section (Left Column)
     with col1:
         st.header("Upload & Convert")
         
@@ -201,8 +202,10 @@ def main():
             # Processor selection
             st.session_state.selected_processor = st.selectbox(
                 "Select processing method",
-                ["docling", "mistral"],
-                index=0 if st.session_state.selected_processor == "docling" else 1
+                ["docling", "mistral", "amazon"],
+                index=0 if st.session_state.selected_processor == "docling" else 
+                    1 if st.session_state.selected_processor == "mistral" else 
+                    2 if st.session_state.selected_processor == "amazon" else 0
             )
             
             # Processor-specific options
@@ -213,7 +216,8 @@ def main():
                 with row2:
                     batch_size = st.slider("Images per API call", min_value=1, max_value=10, value=1, 
                                         disabled=not process_images)
-            else:  # Mistral OCR options
+            
+            elif st.session_state.selected_processor == "mistral":  # Mistral OCR options
                 row1, row2 = st.columns(2)
                 with row1:
                     process_images = st.checkbox("Add AI descriptions to images", value=True, 
@@ -223,8 +227,39 @@ def main():
                                         disabled=not process_images,
                                         help="Number of images to process for AI descriptions (requires Azure OpenAI)")
                     
-                 
-                   # Add a note about Azure OpenAI requirement
+                # Add a note about Azure OpenAI requirement for Mistral
+                if process_images:
+                    if not check_azure_config():
+                        st.warning("⚠️ Azure OpenAI is not configured. AI image descriptions will be skipped. Configure Azure OpenAI in your .env file to enable this feature.")
+                    else:
+                        st.info("✅ Azure OpenAI is configured. AI image descriptions will be added to your images.")
+            
+            elif st.session_state.selected_processor == "amazon":  # Amazon Textract options
+                row1, row2 = st.columns(2)
+                with row1:
+                    process_images = st.checkbox("Add AI descriptions to images", value=False, 
+                                            help="Uses Azure OpenAI to generate detailed descriptions for images (Textract focuses on text)")
+                with row2:
+                    batch_size = st.slider("Images per batch for AI descriptions", min_value=1, max_value=10, value=1, 
+                                        disabled=not process_images,
+                                        help="Number of images to process for AI descriptions (requires Azure OpenAI)")
+                
+                # AWS configuration check
+                from processors.amazon_processor import check_textract_config
+                aws_configured = check_textract_config()
+                
+                if not aws_configured:
+                    st.warning("⚠️ AWS Textract is not configured. Please configure AWS credentials to use Amazon Textract.")
+                    st.info("""
+                    **To configure AWS Textract:**
+                    1. Install AWS CLI: `pip install awscli`
+                    2. Configure credentials: `aws configure`
+                    3. Or set environment variables: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
+                    """)
+                else:
+                    st.success("✅ AWS Textract is configured and ready to use.")
+                
+                # Add a note about image processing
                 if process_images:
                     if not check_azure_config():
                         st.warning("⚠️ Azure OpenAI is not configured. AI image descriptions will be skipped. Configure Azure OpenAI in your .env file to enable this feature.")
@@ -234,15 +269,37 @@ def main():
             # Display current settings
             with st.expander("Current settings"):
                 st.write(f"Selected processor: {st.session_state.selected_processor}")
-                st.write(f"Azure OpenAI Settings:")
-                st.write(f"- Domain: {config.AZURE_DOMAIN}")
-                st.write(f"- Deployment: {config.AZURE_DEPLOYMENT_NAME}")
-                st.write(f"- API Version: {config.AZURE_API_VERSION}")
-                st.write(f"Docling Settings:")
-                st.write(f"- DPI Scale: {config.DOCLING_DPI_SCALE}")
+                
+                if st.session_state.selected_processor in ["docling", "mistral"]:
+                    st.write(f"Azure OpenAI Settings:")
+                    st.write(f"- Domain: {config.AZURE_DOMAIN}")
+                    st.write(f"- Deployment: {config.AZURE_DEPLOYMENT_NAME}")
+                    st.write(f"- API Version: {config.AZURE_API_VERSION}")
+                
+                if st.session_state.selected_processor == "amazon":
+                    st.write(f"AWS Textract Settings:")
+                    import boto3
+                    try:
+                        session = boto3.Session()
+                        st.write(f"- Region: {session.region_name}")
+                        st.write(f"- Profile: {session.profile_name or 'default'}")
+                    except:
+                        st.write("- Configuration: Please check AWS credentials")
+                
+                if st.session_state.selected_processor == "docling":
+                    st.write(f"Docling Settings:")
+                    st.write(f"- DPI Scale: {config.DOCLING_DPI_SCALE}")
+                
+                if st.session_state.selected_processor == "mistral":
+                    st.write(f"Mistral API Settings:")
+                    st.write(f"- API URL: {config.MISTRAL_API_URL}")
             
             # Process button
-            process_button = st.button("Process Document", disabled=not uploaded_file or not config_valid)
+            config_valid_for_processor = config_valid
+            if st.session_state.selected_processor == "amazon":
+                config_valid_for_processor = config_valid and check_textract_config()
+
+            process_button = st.button("Process Document", disabled=not uploaded_file or not config_valid_for_processor)
             if process_button and uploaded_file:
                 start_document_processing(uploaded_file, process_images, batch_size)
         else:
@@ -440,6 +497,10 @@ def main():
     
     # Auto-refresh when background processing is happening
     auto_refresh(interval_seconds=5)
+
+
+
+
 
 if __name__ == "__main__":
     main()

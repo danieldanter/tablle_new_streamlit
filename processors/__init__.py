@@ -7,6 +7,7 @@ from processors.base_processor import BaseProcessor, ProcessingResult
 from processors.quick_processor import QuickProcessor
 from processors.docling_processor import DoclingProcessor
 from processors.mistral_processor import MistralProcessor
+from processors.amazon_processor import AmazonProcessor
 from processors.processor_factory import get_processor
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     'QuickProcessor',
     'DoclingProcessor',
     'MistralProcessor',
+    'AmazonProcessor',
     'get_processor'
 ]
