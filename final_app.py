@@ -133,10 +133,10 @@ def start_document_processing(uploaded_file, process_images=True, batch_size=1):
             st.session_state.quick_extract_file = quick_result.output_file
             st.session_state.quick_extract_time = quick_result.processing_time
             
-            # Store document info for later processing
-            st.session_state.docling_file_path = file_path
-            st.session_state.docling_doc_dir = doc_dir
-            st.session_state.docling_images_dir = images_dir
+            # Store document info for later processing - ENSURE PATHS ARE STRINGS
+            st.session_state.docling_file_path = str(file_path)
+            st.session_state.docling_doc_dir = str(doc_dir)
+            st.session_state.docling_images_dir = str(images_dir)
             st.session_state.docling_process_images = process_images
             st.session_state.docling_batch_size = batch_size
             
@@ -156,6 +156,8 @@ def start_document_processing(uploaded_file, process_images=True, batch_size=1):
         return True
     except Exception as e:
         st.error(f"Error during document processing: {str(e)}")
+        import traceback
+        st.error(f"Full error: {traceback.format_exc()}")
         return False
 
 def main():
@@ -470,30 +472,43 @@ def main():
     processing_status_area = st.container()
     
     # If we're supposed to start full processing, do it here
+
+    # If we're supposed to start full processing, do it here
     if processing_started and st.session_state.processing_status == "processing_in_progress":
         with processing_status_area:
-            # Get the selected processor
-            processor = get_processor(st.session_state.selected_processor)
+            # Verify that all required session state variables exist
+            required_vars = ['docling_file_path', 'docling_doc_dir', 'docling_images_dir', 
+                            'docling_process_images', 'docling_batch_size']
             
-            # Process the document
-            processor.process_document(
-                file_path=st.session_state.docling_file_path,
-                doc_dir=st.session_state.docling_doc_dir,
-                images_dir=st.session_state.docling_images_dir,
-                process_images=st.session_state.docling_process_images,
-                batch_size=st.session_state.docling_batch_size,
-                status_area=processing_status_area
-            )
+            missing_vars = [var for var in required_vars if var not in st.session_state or st.session_state[var] is None]
             
-            # Clear temporary processing variables
-            st.session_state.docling_file_path = None
-            st.session_state.docling_doc_dir = None
-            st.session_state.docling_images_dir = None
-            st.session_state.docling_process_images = None
-            st.session_state.docling_batch_size = None
-            
-            # Trigger a rerun to update the UI
-            st.rerun()
+            if missing_vars:
+                st.error(f"Missing required session state variables: {missing_vars}")
+                st.session_state.processing_status = "error"
+                st.rerun()
+            else:
+                # Get the selected processor
+                processor = get_processor(st.session_state.selected_processor)
+                
+                # Process the document
+                processor.process_document(
+                    file_path=st.session_state.docling_file_path,
+                    doc_dir=st.session_state.docling_doc_dir,
+                    images_dir=st.session_state.docling_images_dir,
+                    process_images=st.session_state.docling_process_images,
+                    batch_size=st.session_state.docling_batch_size,
+                    status_area=processing_status_area
+                )
+                
+                # Clear temporary processing variables
+                st.session_state.docling_file_path = None
+                st.session_state.docling_doc_dir = None
+                st.session_state.docling_images_dir = None
+                st.session_state.docling_process_images = None
+                st.session_state.docling_batch_size = None
+                
+                # Trigger a rerun to update the UI
+                st.rerun()
     
     # Auto-refresh when background processing is happening
     auto_refresh(interval_seconds=5)
